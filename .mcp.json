@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "getyourjob": {
+      "type": "http",
+      "url": "https://getyourjob.pro/api/mcp"
+    }
+  }
+}

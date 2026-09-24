@@ -1,0 +1,11 @@
+{
+  "name": "getyourjob",
+  "owner": { "name": "GetYourJob", "email": "omdev.tech@gmail.com" },
+  "plugins": [
+    {
+      "name": "getyourjob",
+      "source": "./",
+      "description": "IT job search in France from Claude: jobs and freelance missions, AI profile matching, application tracking, cover letters and action plans."
+    }
+  ]
+}

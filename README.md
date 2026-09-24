@@ -37,6 +37,13 @@ connector with the endpoint and OAuth authentication.
 claude mcp add --transport http getyourjob https://getyourjob.pro/api/mcp
 ```
 
+**Claude Code plugin** - the connector plus two skills (job search, application prep):
+
+```bash
+claude plugin marketplace add omdev-tech/getyourjob-mcp
+claude plugin install getyourjob@getyourjob
+```
+
 **Gemini CLI** - install this repository as an extension:
 
 ```bash
