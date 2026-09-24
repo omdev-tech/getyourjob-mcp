@@ -1,0 +1,12 @@
+{
+  "name": "getyourjob",
+  "version": "1.0.0",
+  "description": "French IT job search, AI candidate-offer matching, application tracking and cover letters from GetYourJob.",
+  "mcpServers": {
+    "getyourjob": {
+      "httpUrl": "https://getyourjob.pro/api/mcp",
+      "timeout": 30000
+    }
+  },
+  "contextFileName": "GEMINI.md"
+}
