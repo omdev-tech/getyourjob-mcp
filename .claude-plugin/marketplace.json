@@ -1,6 +1,12 @@
 {
   "name": "getyourjob",
-  "owner": { "name": "GetYourJob", "email": "omdev.tech@gmail.com" },
+  "owner": {
+    "name": "GetYourJob",
+    "email": "omdev.tech@gmail.com"
+  },
+  "metadata": {
+    "description": "Official GetYourJob plugins for Claude Code: IT job search in France."
+  },
   "plugins": [
     {
       "name": "getyourjob",
