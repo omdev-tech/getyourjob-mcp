@@ -1,0 +1,12 @@
+{
+  "name": "getyourjob",
+  "description": "IT job search in France from Cursor: jobs and freelance missions, AI profile matching, application tracking, cover letters and action plans, through the official GetYourJob MCP server.",
+  "version": "1.0.0",
+  "author": { "name": "GetYourJob", "email": "omdev.tech@gmail.com", "url": "https://getyourjob.pro" },
+  "homepage": "https://getyourjob.pro/mcp",
+  "repository": "https://github.com/omdev-tech/getyourjob-mcp",
+  "license": "MIT",
+  "keywords": ["jobs", "job-search", "career", "recruitment", "france", "freelance", "mcp"],
+  "logo": "logo.png",
+  "mcpServers": "./mcp.json"
+}
