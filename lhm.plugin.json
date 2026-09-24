@@ -1,0 +1,1303 @@
+{
+  "identifier": "getyourjob-mcp",
+  "name": "GetYourJob",
+  "version": "1.0.0",
+  "description": "French IT job search, AI candidate-offer matching, application tracking and cover letters. Official hosted MCP server of GetYourJob, OAuth sign-in with a free account.",
+  "cloudEndpoint": "https://getyourjob.pro/api/mcp",
+  "author": "GetYourJob",
+  "homepage": "https://getyourjob.pro",
+  "icon": "https://raw.githubusercontent.com/omdev-tech/getyourjob-mcp/main/logo.png",
+  "tags": [
+    "jobs",
+    "career",
+    "recruitment",
+    "job-search",
+    "france",
+    "ai-matching"
+  ],
+  "tools": [
+    {
+      "name": "get_auth_status",
+      "description": "Check your connection status, subscription plan, remaining AI matching quota, and available features. Call this first to verify authentication.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_my_profile",
+      "description": "Get your developer profile summary including skills, work preferences, seniority, location, compensation, and profile completeness. Optionally view a specific persona. Read-only - profile edits must be done on the website.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "personaId": {
+            "type": "string",
+            "description": "View a specific persona instead of the base profile"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "search_jobs",
+      "description": "Search for job offers with structured filters. Returns light summaries (~150 tokens/job) - use get_job_details for full descriptions.\n\nAvailable filter values:\n- workTypes: REMOTE, HYBRID, ONSITE (matches the raw label; prefer remoteVerdicts for remote claims)\n- remoteVerdicts: FULL_REMOTE, FULL_REMOTE_CONSTRAINED, FULL_REMOTE_UNVERIFIED, HYBRID, ON_SITE\n- contractTypes: CDI, Freelance, CDD, Alternance, Stage\n- seniorityLevels: Junior, Mid, Senior, Top profil\n- subcontracting: NO_STT, STT_YES, NOT_PRECISE\n- roles: Any role string (e.g., \"Full Stack\", \"Backend\", \"DevOps\")\n- technologies: Any technology name (e.g., \"React\", \"Python\", \"AWS\")\n- locations: City or region names (e.g., \"Paris\", \"Lyon\", \"Ile-de-France\")\n\nEach summary may carry `marketPosition`: the offer's pay against comparable active offers (same role + seniority, nearest geography). `verdict` is 'under' (below p25), 'fair' (inside p25-p75) or 'above' (over p75), with `median`/`p25`/`p75` in whole euros and `kind` = 'daily' (TJM) or 'annual'. A null verdict means the offer hides its pay, so the band is a cohort estimate only - do not present it as a judgement on that offer. Omitted when too few comparable offers exist.\n\nA result may carry `remoteVerification` {verdict, verified, meaning, constraintDetail?, evidence?}. It overrides the raw `remote` label, which the verifier rewrites: without it a merely announced full remote is indistinguishable from a confirmed one. Never state a full remote as confirmed when `verified` is false, and follow the `meaning` line.\n\nDefault: 10 results sorted by newest. Max 30 per page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "technologies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by technologies (e.g., [\"React\", \"TypeScript\"])"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by role types"
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by locations"
+          },
+          "workTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "REMOTE",
+                "HYBRID",
+                "ONSITE"
+              ]
+            }
+          },
+          "remoteVerdicts": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "FULL_REMOTE",
+                "FULL_REMOTE_CONSTRAINED",
+                "FULL_REMOTE_UNVERIFIED",
+                "HYBRID",
+                "ON_SITE"
+              ]
+            },
+            "description": "Keep only offers carrying these remote-verification verdicts. FULL_REMOTE = full remote confirmed by the offer text; FULL_REMOTE_CONSTRAINED = full remote subject to a condition; FULL_REMOTE_UNVERIFIED = full remote announced by the source but unconfirmed; HYBRID / ON_SITE = judged non-remote. Use ['FULL_REMOTE'] for « verified full remote only », and ['FULL_REMOTE','FULL_REMOTE_CONSTRAINED'] to include conditional ones."
+          },
+          "contractTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "CDI, Freelance, CDD, Alternance, Stage"
+          },
+          "seniorityLevels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Set only when the user explicitly asks for a seniority level - never default it to the candidate's own seniority. Levels are matched exactly: when filtering for a TOP_PROFIL candidate, pass both TOP_PROFIL and SENIOR (senior offers fit top profils)."
+          },
+          "subcontracting": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "NO_STT",
+                "STT_YES",
+                "NOT_PRECISE"
+              ]
+            }
+          },
+          "isUrgent": {
+            "type": "boolean"
+          },
+          "hasPrice": {
+            "type": "boolean"
+          },
+          "search": {
+            "type": "string",
+            "description": "Free-text keyword search"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30,
+            "default": 10
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "extractedAt",
+              "daysPosted",
+              "priorityScore"
+            ],
+            "default": "extractedAt"
+          },
+          "sortDirection": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          },
+          "detail": {
+            "type": "string",
+            "enum": [
+              "minimal",
+              "summary",
+              "full"
+            ],
+            "default": "summary"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_job_details",
+      "description": "Get full details for a specific job offer including description (max 3000 chars), company info, how well it fits your profile, and `marketPosition` - whether the pay sits under/fair/above the market band for comparable offers (values in whole euros).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "The job offer ID"
+          }
+        },
+        "required": [
+          "jobId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_company_details",
+      "description": "Get full company information by slug or id, including type (ESN / direct employer / recruitment agency / training institution / freelance platform), size, industry, HQ, website, LinkedIn, description, and ALL their active offers.\n\nUse this after seeing a `companyBrief` on a job summary (from search_jobs) or detail (from get_job_details) - every brief carries a `slug` you can pass here directly.\n\nThe response includes up to 50 active offers with id + role + location + work type + days posted. Call `get_job_details(offer_id)` on any of them to pull the full description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "description": "URL slug for the company (preferred). Example: \"capgemini\" or \"sopra-steria\"."
+          },
+          "id": {
+            "type": "string",
+            "description": "Company UUID. Use slug if available; id is a fallback."
+          },
+          "includeInactiveOffers": {
+            "type": "boolean",
+            "default": false,
+            "description": "Include offers that have been marked inactive. Default false."
+          },
+          "maxOffers": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 20,
+            "description": "Max number of offers to return. Default 20, max 50."
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "save_job",
+      "description": "Save a job offer to your application pipeline. Defaults to \"A_CONTACTER\" (to contact) status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "The job offer ID to save"
+          },
+          "personaIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tag with specific persona IDs"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Personal note about this job"
+          }
+        },
+        "required": [
+          "jobId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "update_application_status",
+      "description": "Move a saved job through your application pipeline.\n\nStatuses: A_CONTACTER → CV_ENVOYE → EN_ATTENTE_RETOUR → ENTRETIEN → RELANCE → OFFRE_RECUE or REFUSE",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "savedOfferId": {
+            "type": "string",
+            "description": "The saved offer ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "A_CONTACTER",
+              "CV_ENVOYE",
+              "EN_ATTENTE_RETOUR",
+              "ENTRETIEN",
+              "RELANCE",
+              "OFFRE_RECUE",
+              "REFUSE"
+            ],
+            "description": "New pipeline status"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Update your note"
+          },
+          "reminderDate": {
+            "type": "string",
+            "description": "Set a reminder date (YYYY-MM-DD)"
+          }
+        },
+        "required": [
+          "savedOfferId",
+          "status"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_my_pipeline",
+      "description": "Get your application pipeline overview: status counts and top items. Filter by status or persona. Includes coaching insights for stale applications.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "A_CONTACTER",
+              "CV_ENVOYE",
+              "EN_ATTENTE_RETOUR",
+              "ENTRETIEN",
+              "RELANCE",
+              "OFFRE_RECUE",
+              "REFUSE"
+            ],
+            "description": "Filter by specific status"
+          },
+          "personaId": {
+            "type": "string",
+            "description": "Filter by persona"
+          },
+          "detail": {
+            "type": "string",
+            "enum": [
+              "minimal",
+              "summary",
+              "full"
+            ],
+            "default": "summary"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_saved_job",
+      "description": "Get details of a specific saved job in your pipeline, including the full job offer details and your notes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "savedOfferId": {
+            "type": "string",
+            "description": "The saved offer ID"
+          }
+        },
+        "required": [
+          "savedOfferId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "remove_saved_job",
+      "description": "Remove a job from your application pipeline entirely.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "savedOfferId": {
+            "type": "string",
+            "description": "The saved offer ID to remove"
+          }
+        },
+        "required": [
+          "savedOfferId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_matching_quota",
+      "description": "Check your remaining AI matching runs for this month and when they reset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "run_ai_matching",
+      "description": "Run AI-powered matching to find your best-fit jobs. Uses a two-layer AI pipeline: Layer 1 (algorithmic) scores all eligible jobs on technology, location, seniority, work type, and experience. Layer 2 (LLM) deep-analyzes the top candidates with strengths, concerns, and recommendations.\n\nCosts 1 matching run from your monthly quota (free: 1/month, paid: unlimited).\n\nIMPORTANT - Search configuration:\nBy default, matching uses the active persona's profile settings (location scope, work preferences). You can override any of these to widen or narrow the search:\n- **locationScope**: Controls how many jobs are evaluated. \"local\" = near the user's city (~500-1500 jobs), \"national\" = same country (~5000-15000 jobs), \"international\" = worldwide (~16000+ jobs). Defaults to the persona's setting. TIP: If the user works REMOTE, use \"national\" or \"international\" to maximize matches - a \"local\" scope misses remote jobs posted from other cities.\n- **workTypeFilter**: Filter by REMOTE, HYBRID, ONSITE. Omit to include all work types. Use this when the user specifically wants only remote or only onsite jobs.\n- **contractTypeFilter**: Filter by \"Freelance\", \"CDI\", \"CDD\", etc. Omit to include all contract types.\n- **roleFilter**: Filter by role types (e.g., \"Full Stack\", \"Backend\", \"Mobile\").\n- **maxDistanceKm**: Only relevant for \"local\" scope - max distance in km from the user's city.\n- **minMatchScore**: Minimum score threshold (0-100). Default 60. Use 40-50 for broader results, 70-80 for precise matches.\n- **personaId**: Use a specific persona. Omit to use the currently active persona.\n\nReturns top 10 matches by default (max 20) with score breakdowns.\n\nWhen fewer than 10 jobs meet minMatchScore, the response is padded with slightly-lower-scoring matches flagged `expanded: true` (session-level `thresholdExpanded`/`expandedCount` are set). Present those to the user as \"close matches below your threshold\", never as qualified results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "personaId": {
+            "type": "string",
+            "description": "Use a specific persona. Omit to use the currently active persona."
+          },
+          "locationScope": {
+            "type": "string",
+            "enum": [
+              "local",
+              "national",
+              "international"
+            ],
+            "description": "Geographic scope. Defaults to persona setting. Use \"national\" or \"international\" for REMOTE users to maximize matches."
+          },
+          "maxDistanceKm": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Max distance in km from user city. Only used with \"local\" scope."
+          },
+          "workTypeFilter": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "REMOTE",
+                "HYBRID",
+                "ONSITE"
+              ]
+            },
+            "description": "Filter by work type. Omit to include all."
+          },
+          "roleFilter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by role types (e.g., \"Full Stack\", \"Mobile\")."
+          },
+          "contractTypeFilter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by contract type: \"Freelance\", \"CDI\", \"CDD\", \"Alternance\", \"Stage\". Omit to include all."
+          },
+          "minMatchScore": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 60,
+            "description": "Minimum match score (0-100). Default 60. Lower for broader results."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 10,
+            "description": "Number of results to return (max 20)."
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "compare_jobs",
+      "description": "Compare 2-5 jobs side by side against your profile. Shows technology overlap, salary, work type, seniority, and location for each job with a winner per dimension.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jobIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "maxItems": 5,
+            "description": "Job offer IDs to compare"
+          }
+        },
+        "required": [
+          "jobIds"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "switch_persona",
+      "description": "Switch your active persona. Subsequent searches and matching will use this persona's skills, seniority, and preferences. Pass null to revert to your base profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "personaId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Persona ID to activate, or null to revert to base profile"
+          }
+        },
+        "required": [
+          "personaId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "generate_cover_letter",
+      "description": "Generate an AI-powered cover letter tailored to a specific job offer. Requires paid ToolBox Candidat plan.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "The job offer ID to write a cover letter for"
+          },
+          "personaId": {
+            "type": "string",
+            "description": "Use a specific persona"
+          }
+        },
+        "required": [
+          "jobId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_market_insights",
+      "description": "Get aggregate job-market insights over active offers: the TOP in-demand skills with REAL offer counts, the top hiring locations by offer count, and the work-mode mix (remote/hybrid/onsite %). Scope with `role` and/or `location`. Use this to recommend which SKILL to learn before which LOCATION to target, with the real counts as justification. Requires paid plan.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "Role to scope insights to (a RoleType like FRONTEND, or free text)"
+          },
+          "location": {
+            "type": "string",
+            "description": "Location to scope insights to"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "generate_action_plan",
+      "description": "Generate a personalized action plan (\"plan d'action\") for a specific job offer: a 3-5 step checklist of concrete actions to apply smartly, each with a short justification, plus an overall confidence (\"Élevée\"/\"Moyenne\"/\"Faible\"). Advice adapts to the offer's company type (e.g. ESN → target the manager over HR), stack, role and location. Works whether or not the offer is saved. Every call is a FRESH generation (a new plan, and one quota unit on free plans): to keep a plan you have just shown, call `save_action_plan` - never generate again to save. `save: true` persists at generation time when the user asked for it up front; if a saved plan for this offer already has ticked steps nothing is overwritten and the answer says `needs_confirmation`. Read a stored plan back with `get_my_action_plan`.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jobOfferId": {
+            "type": "string",
+            "description": "The job offer ID to build an action plan for"
+          },
+          "regenerate": {
+            "type": "boolean",
+            "description": "Force a fresh generation even if a plan already exists for a saved offer"
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the generated plan to the candidate's saved action plans (default false). The plan is stored exactly as generated - you do not and cannot supply the items."
+          },
+          "replaceExisting": {
+            "type": "boolean",
+            "description": "With `save`: replace a saved plan that already has ticked steps. Only after the user confirmed they accept losing that progress."
+          }
+        },
+        "required": [
+          "jobOfferId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "save_action_plan",
+      "description": "Save the action plan you JUST generated for an offer (the last generate_action_plan result for it, kept one hour) so the candidate finds it again and can tick its steps off. No new generation, no quota. Returns status `saved` with the planId; `no_recent_plan` when nothing was generated recently (generate with `save: true` instead); or `needs_confirmation` when a saved plan for this offer already has ticked steps - tell the user replacing it resets that progress, and only on their confirmation call again with `replaceExisting: true`.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jobOfferId": {
+            "type": "string",
+            "description": "The offer the plan was generated for"
+          },
+          "replaceExisting": {
+            "type": "boolean",
+            "description": "Replace a saved plan that already has ticked steps (after explicit user confirmation)"
+          }
+        },
+        "required": [
+          "jobOfferId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_my_action_plan",
+      "description": "Read the candidate's SAVED action plans - the stored checklists with the real `done` flags they have ticked off in the app. With `jobOfferId`, returns the saved plan for that offer (or says plainly that none is saved for it). Without it, returns their most recent saved plans, newest first. This is a pure read of stored data: it costs nothing, consumes no quota and calls no AI, so prefer it over `generate_action_plan` whenever the question is about a plan the candidate already has or their progress on it. Each item carries its `index`, which `complete_action_plan_step` takes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jobOfferId": {
+            "type": "string",
+            "description": "Restrict to the saved plan for this job offer. Omit to list the recent saved plans."
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "complete_action_plan_step",
+      "description": "Tick (or untick) one step of a SAVED action plan, exactly as the candidate would in the app. Identify the plan with `planId` (from get_my_action_plan) or with `jobOfferId`, then give the step's `index` as returned by get_my_action_plan and `done` (true to tick, false to untick). Returns the updated plan with its new progress. Only ever tick a step the candidate told you they have actually done.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "description": "The saved plan id, as returned by get_my_action_plan"
+          },
+          "jobOfferId": {
+            "type": "string",
+            "description": "Alternative to planId: the offer whose saved plan should be updated"
+          },
+          "itemIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The step's `index` from get_my_action_plan"
+          },
+          "done": {
+            "type": "boolean",
+            "description": "true to tick the step off, false to untick it"
+          }
+        },
+        "required": [
+          "itemIndex",
+          "done"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_my_interview_progress",
+      "description": "Read the candidate's interview-training measurement, aggregated over every scored mock interview they have run on /train: per-dimension averages (`dimensions`), the dimensions they are strong on (`strongPoints`) and above all the dimensions to work on (`workPoints`), plus `recurringImprovements` - the feedback that keeps coming back across sessions. Use `workPoints` and `recurringImprovements` to propose a concrete weak subject to work on next. Pure read: no AI call, no quota. IMPORTANT: an EMPTY result (`status: \"no_scored_session\"`) is ambiguous - the scoring service may simply have been unreachable - so infer NOTHING from it: never say the candidate has not trained and never treat it as a bad score.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_my_cv_analysis",
+      "description": "Read the candidate's STORED CV analysis report: the overall score, the per-dimension scores (ats / consistency / experience) with their worst findings, and the skill suggestions with their REAL active-offer counts. Pure read of a stored report - no AI call, no quota, nothing recomputed. Caveats you MUST respect when you use it: `partial: true` means at least one rule could not be evaluated, so the score is incomplete and must be presented as such; `roleScoped: false` means the advice is platform-wide and must NOT be presented as specific to a target role; `marketAvailable: false` means the market index was unavailable, so NO market figures may be quoted. When no report is stored the answer says so - never estimate a score yourself.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "update_my_profile",
+      "description": "Update your developer profile: headline, seniority, experience, compensation, work preferences, location, and interested roles. Only provided fields are updated - omitted fields stay unchanged.\n\nValid seniorityLevel: JUNIOR, MID, SENIOR, TOP_PROFIL\nValid workTypes: REMOTE, HYBRID, ONSITE\nValid jobVisibilityScope: LOCAL, NATIONAL, INTERNATIONAL\nValid interestedRoles: FULL_STACK, FRONTEND, BACKEND, MOBILE, LEAD, ARCHITECT, CHEF_DE_PROJET, DELIVERY_MANAGER, PRODUCT_OWNER, AGILE_COACH, SCRUM_MASTER_SAFE, RELEASE_TRAIN_ENGINEER, DEVOPS, AI, DATA_SCIENTIST, DATA_ANALYST, DATA_ENGINEER, BUSINESS_ANALYST, SECURITY, PRODUCT_DESIGNER, QA, CONSULTANT, SCRUM_MASTER, BUILDER",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "headline": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "yearsOfExperience": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 50
+          },
+          "seniorityLevel": {
+            "type": "string",
+            "enum": [
+              "JUNIOR",
+              "MID",
+              "SENIOR",
+              "TOP_PROFIL"
+            ]
+          },
+          "dailyRate": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 50,
+                "maximum": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daily rate (TJM) in euros, e.g. 700 for 700€/day"
+          },
+          "contractSalaryMin": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 500000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Minimum annual salary in euros, e.g. 55000"
+          },
+          "contractSalaryMax": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 500000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Maximum annual salary in euros, e.g. 70000"
+          },
+          "contractTypePreference": {
+            "type": "string",
+            "enum": [
+              "FREELANCE",
+              "CDI",
+              "STAGE",
+              "ALTERNANCE",
+              "BOTH"
+            ],
+            "description": "Freelance, CDI, Stage, Alternance, or Both"
+          },
+          "workTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "REMOTE",
+                "HYBRID",
+                "ONSITE"
+              ]
+            },
+            "minItems": 1
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "City/country string, e.g. \"Paris, France\""
+          },
+          "jobVisibilityScope": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "NATIONAL",
+              "INTERNATIONAL"
+            ]
+          },
+          "interestedRoles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "FULL_STACK",
+                "FRONTEND",
+                "BACKEND",
+                "MOBILE",
+                "LEAD",
+                "ARCHITECT",
+                "CHEF_DE_PROJET",
+                "DELIVERY_MANAGER",
+                "PRODUCT_OWNER",
+                "AGILE_COACH",
+                "SCRUM_MASTER_SAFE",
+                "RELEASE_TRAIN_ENGINEER",
+                "DEVOPS",
+                "AI",
+                "DATA_SCIENTIST",
+                "DATA_ANALYST",
+                "DATA_ENGINEER",
+                "BUSINESS_ANALYST",
+                "SECURITY",
+                "PRODUCT_DESIGNER",
+                "QA",
+                "CONSULTANT",
+                "SCRUM_MASTER",
+                "BUILDER"
+              ]
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "update_my_skills",
+      "description": "Replace your profile's main skills and/or secondary skills. Main skills (1-3) define your primary expertise. Secondary skills have a rating from 0 (novice) to 9 (expert).\n\nMain skills are completely replaced - provide the full list.\nSecondary skills are completely replaced - provide the full list.\nOmit mainSkills or secondarySkills to leave that category unchanged.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mainSkills": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "technology": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Technology name, e.g. \"React\", \"Python\""
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 3,
+                  "description": "Priority: 1 = primary, 2 = secondary, 3 = tertiary"
+                }
+              },
+              "required": [
+                "technology",
+                "order"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 3
+          },
+          "secondarySkills": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "technology": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "rating": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9,
+                  "description": "0 = novice, 9 = expert"
+                }
+              },
+              "required": [
+                "technology",
+                "rating"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "list_personas",
+      "description": "List all your personas with their skills, seniority, and active status. Each persona represents a different market positioning.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "create_persona",
+      "description": "Create a new persona to target a specific market segment. Each persona has its own skills, seniority, and preferences. Use this after analyzing market insights to position yourself for different types of roles.\n\nExample: Create a \"DevOps Freelance\" persona with Docker/Kubernetes skills to capture infrastructure demand alongside your main \"React Fullstack\" profile.\n\nLocation handling: if you don't pass a `location` argument, the tool inherits location from the user's main profile. If the main profile has no location either, the tool returns { status: \"needs_user_info\", missing_fields, hint } - ask the user the question_fr listed for each missing field (location, and max commute distance for LOCAL scope), then call create_persona again with the collected values.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Persona name, e.g. \"DevOps Freelance\", \"React Lead\""
+          },
+          "headline": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200,
+            "description": "Professional headline for this persona"
+          },
+          "yearsOfExperience": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 50
+          },
+          "seniorityLevel": {
+            "type": "string",
+            "enum": [
+              "JUNIOR",
+              "MID",
+              "SENIOR",
+              "TOP_PROFIL"
+            ]
+          },
+          "mainSkills": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "technology": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 3
+                }
+              },
+              "required": [
+                "technology",
+                "order"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 3,
+            "description": "Primary skills (1-3) with order 1/2/3"
+          },
+          "interestedRoles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "FULL_STACK",
+                "FRONTEND",
+                "BACKEND",
+                "MOBILE",
+                "LEAD",
+                "ARCHITECT",
+                "CHEF_DE_PROJET",
+                "DELIVERY_MANAGER",
+                "PRODUCT_OWNER",
+                "AGILE_COACH",
+                "SCRUM_MASTER_SAFE",
+                "RELEASE_TRAIN_ENGINEER",
+                "DEVOPS",
+                "AI",
+                "DATA_SCIENTIST",
+                "DATA_ANALYST",
+                "DATA_ENGINEER",
+                "BUSINESS_ANALYST",
+                "SECURITY",
+                "PRODUCT_DESIGNER",
+                "QA",
+                "CONSULTANT",
+                "SCRUM_MASTER",
+                "BUILDER"
+              ]
+            },
+            "minItems": 1
+          },
+          "workTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "REMOTE",
+                "HYBRID",
+                "ONSITE"
+              ]
+            },
+            "minItems": 1
+          },
+          "dailyRate": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 50,
+                "maximum": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daily rate (TJM) in euros, e.g. 700 for 700€/day"
+          },
+          "contractSalaryMin": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 500000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Minimum annual salary in euros, e.g. 55000"
+          },
+          "contractSalaryMax": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 500000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Maximum annual salary in euros, e.g. 70000"
+          },
+          "contractTypePreference": {
+            "type": "string",
+            "enum": [
+              "FREELANCE",
+              "CDI",
+              "STAGE",
+              "ALTERNANCE",
+              "BOTH"
+            ],
+            "default": "BOTH",
+            "description": "Freelance, CDI, Stage, Alternance, or Both"
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "City or address to geocode, e.g. \"Bordeaux\", \"Paris 15e\""
+          },
+          "maxTravelDistance": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 500,
+            "description": "Max commute distance in km (default 50)"
+          },
+          "jobVisibilityScope": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "NATIONAL",
+              "INTERNATIONAL"
+            ]
+          },
+          "secondarySkills": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "technology": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "rating": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9
+                }
+              },
+              "required": [
+                "technology",
+                "rating"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "name",
+          "headline",
+          "yearsOfExperience",
+          "seniorityLevel",
+          "mainSkills",
+          "interestedRoles",
+          "workTypes"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "update_persona",
+      "description": "Update a persona's profile fields: name, headline, seniority, experience, compensation, work preferences, location, roles. Only provided fields are updated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "personaId": {
+            "type": "string",
+            "description": "The persona ID to update"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "headline": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "yearsOfExperience": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 50
+          },
+          "seniorityLevel": {
+            "type": "string",
+            "enum": [
+              "JUNIOR",
+              "MID",
+              "SENIOR",
+              "TOP_PROFIL"
+            ]
+          },
+          "dailyRate": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 50,
+                "maximum": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daily rate (TJM) in euros, e.g. 700 for 700€/day"
+          },
+          "contractSalaryMin": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 500000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Minimum annual salary in euros, e.g. 55000"
+          },
+          "contractSalaryMax": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 500000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Maximum annual salary in euros, e.g. 70000"
+          },
+          "contractTypePreference": {
+            "type": "string",
+            "enum": [
+              "FREELANCE",
+              "CDI",
+              "STAGE",
+              "ALTERNANCE",
+              "BOTH"
+            ],
+            "description": "Freelance, CDI, Stage, Alternance, or Both"
+          },
+          "workTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "REMOTE",
+                "HYBRID",
+                "ONSITE"
+              ]
+            },
+            "minItems": 1
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "City or address to geocode, e.g. \"Bordeaux\", \"Paris 15e\""
+          },
+          "maxTravelDistance": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 500,
+            "description": "Max commute distance in km"
+          },
+          "jobVisibilityScope": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "NATIONAL",
+              "INTERNATIONAL"
+            ]
+          },
+          "interestedRoles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "FULL_STACK",
+                "FRONTEND",
+                "BACKEND",
+                "MOBILE",
+                "LEAD",
+                "ARCHITECT",
+                "CHEF_DE_PROJET",
+                "DELIVERY_MANAGER",
+                "PRODUCT_OWNER",
+                "AGILE_COACH",
+                "SCRUM_MASTER_SAFE",
+                "RELEASE_TRAIN_ENGINEER",
+                "DEVOPS",
+                "AI",
+                "DATA_SCIENTIST",
+                "DATA_ANALYST",
+                "DATA_ENGINEER",
+                "BUSINESS_ANALYST",
+                "SECURITY",
+                "PRODUCT_DESIGNER",
+                "QA",
+                "CONSULTANT",
+                "SCRUM_MASTER",
+                "BUILDER"
+              ]
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "personaId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "update_persona_skills",
+      "description": "Replace a persona's main skills and/or secondary skills. Skills are fully replaced - provide the complete list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "personaId": {
+            "type": "string"
+          },
+          "mainSkills": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "technology": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 3
+                }
+              },
+              "required": [
+                "technology",
+                "order"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 3
+          },
+          "secondarySkills": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "technology": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "rating": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9
+                }
+              },
+              "required": [
+                "technology",
+                "rating"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "personaId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "delete_persona",
+      "description": "Delete a persona. This is permanent - all associated skills and saved offer tags will be removed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "personaId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "personaId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    }
+  ]
+}
